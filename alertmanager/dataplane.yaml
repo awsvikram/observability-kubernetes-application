@@ -1,0 +1,57 @@
+1.	# Data plane wellness
+2.	# Node not ready
+3.	
+4.	  - alert: NodeNotReady
+5.	    expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+6.	    for: 10m
+7.	    labels:
+8.	      severity: critical
+9.	    annotations:
+10.	      summary: Node not ready (instance {{ $labels.instance }})
+11.	      description: "Node {{ $labels.node }} has been unready for a long time\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+12.	
+13.	# Memory utilization and alert configuration for worker nodes
+14.	
+15.	  - alert: NodeMemoryPressure
+16.	    expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+17.	    for: 2m
+18.	    labels:
+19.	      severity: critical
+20.	    annotations:
+21.	      summary: Node memory pressure (instance {{ $labels.instance }})
+22.	      description: "Node {{ $labels.node }} has MemoryPressure condition\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+23.	
+24.	
+25.	# Disk pressure alert config
+26.	
+27.	  - alert: NodeDiskPressure
+28.	    expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+29.	    for: 2m
+30.	    labels:
+31.	      severity: critical
+32.	    annotations:
+33.	      summary: Node disk pressure (instance {{ $labels.instance }})
+34.	      description: "Node {{ $labels.node }} has DiskPressure condition\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+35.	
+36.	# Monitoring network utilization
+37.	
+38.	  - alert: NodeNetworkUnavailable
+39.	    expr: kube_node_status_condition{condition="NetworkUnavailable",status="true"} == 1
+40.	    for: 2m
+41.	    labels:
+42.	      severity: critical
+43.	    annotations:
+44.	      summary: Node network unavailable (instance {{ $labels.instance }})
+45.	      description: "Node {{ $labels.node }} has NetworkUnavailable condition\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+46.	
+47.	
+48.	# Capacity issues alert config
+49.	  - alert: NodeOutOfPodCapacity
+50.	    expr: sum by (node) ((kube_pod_status_phase{phase="Running"} == 1) + on(uid) group_left(node) (0 * kube_pod_info{pod_template_hash=""})) / sum by (node) (kube_node_status_allocatable{resource="pods"}) * 100 > 90
+51.	    for: 2m
+52.	    labels:
+53.	      severity: warning
+54.	    annotations:
+55.	      summary: Node out of pod capacity (instance {{ $labels.instance }})
+56.	      description: "Node {{ $labels.node }} is out of pod capacity\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+57.	
