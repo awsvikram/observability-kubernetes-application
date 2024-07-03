@@ -1,0 +1,42 @@
+1.	# Kubernetes API server errors 
+2.	  - alert: ApiServerErrors
+3.	    expr: sum(rate(apiserver_request_total{job="apiserver",code=~"(?:5..)"}[1m])) by (instance, job) / sum(rate(apiserver_request_total{job="apiserver"}[1m])) by (instance, job) * 100 > 3
+4.	    for: 2m
+5.	    labels:
+6.	      severity: critical
+7.	    annotations:
+8.	      summary:  API server errors (instance {{ $labels.instance }})
+9.	      description: "API server is experiencing high error rate\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+10.	
+11.	
+12.	 # Kubernetes API client errors
+13.	  - alert: ApiClientErrors
+14.	    expr: (sum(rate(rest_client_requests_total{code=~"(4|5).."}[1m])) by (instance, job) / sum(rate(rest_client_requests_total[1m])) by (instance, job)) * 100 > 1
+15.	    for: 2m
+16.	    labels:
+17.	      severity: critical
+18.	    annotations:
+19.	      summary: API client errors (instance {{ $labels.instance }})
+20.	      description: "API client is experiencing high error rate\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+21.	
+22.	# Kubernetes client certificate expiry
+23.	  - alert: KubernetesClientCertificateExpiresSoon
+24.	    expr: apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 24*60*60
+25.	    for: 0m
+26.	    labels:
+27.	      severity: critical
+28.	    annotations:
+29.	      summary: Kubernetes client certificate expires soon (instance {{ $labels.instance }})
+30.	      description: "A client certificate used to authenticate to the apiserver is expiring in less than 24.0 hours.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+31.	
+32.	# Kubernetes API server latency 
+33.	
+34.	  - alert: ApiServerLatency
+35.	    expr: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~"(?:CONNECT|WATCHLIST|WATCH|PROXY)"} [10m])) WITHOUT (subresource)) > 1
+36.	    for: 2m
+37.	    labels:
+38.	      severity: warning
+39.	    annotations:
+40.	      summary:  API server latency (instance {{ $labels.instance }})
+41.	      description: "API server has a 99th percentile latency of {{ $value }} seconds for {{ $labels.verb }} {{ $labels.resource }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
