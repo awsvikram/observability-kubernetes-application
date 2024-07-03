@@ -1,0 +1,86 @@
+1.	# Workload wellness
+2.	# Container OOM alert
+3.	
+4.	    - alert: ContainerOomKiller
+5.	    expr: (kube_pod_container_status_restarts_total - kube_pod_container_status_restarts_total offset 10m >= 1) and ignoring (reason) min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m]) == 1
+6.	    for: 0m
+7.	    labels:
+8.	      severity: warning
+9.	    annotations:
+10.	      summary: Container oom killer (instance {{ $labels.instance }})
+11.	      description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} has been OOMKilled {{ $value }} times in the last 10 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+12.	
+13.	# PersistentVolumeClaim in pending state
+14.	
+15.	  - alert: PersistentvolumeclaimPending
+16.	    expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+17.	    for: 2m
+18.	    labels:
+19.	      severity: warning
+20.	    annotations:
+21.	      summary: PersistentVolumeClaim pending (instance {{ $labels.instance }})
+22.	      description: "PersistentVolumeClaim {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is pending\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+23.	
+24.	# PV out of space
+25.	
+26.	  - alert: VolumeOutOfDiskSpace
+27.	    expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes * 100 < 10
+28.	    for: 2m
+29.	    labels:
+30.	      severity: warning
+31.	    annotations:
+32.	      summary: Volume out of disk space (instance {{ $labels.instance }})
+33.	      description: "Volume is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+34.	
+35.	# HPA unable to scale
+36.	
+37.	  - alert: HpaScaleInability
+38.	    expr: (kube_horizontalpodautoscaler_spec_max_replicas - kube_horizontalpodautoscaler_status_desired_replicas) * on (horizontalpodautoscaler,namespace) (kube_horizontalpodautoscaler_status_condition{condition="ScalingLimited", status="true"} == 1) == 0
+39.	    for: 2m
+40.	    labels:
+41.	      severity: warning
+42.	    annotations:
+43.	      summary: HPA scale inability (instance {{ $labels.instance }})
+44.	      description: "HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }} is unable to scale\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+45.	
+46.	# HPA has reached the max replica count for a deployment
+47.	
+48.	  - alert: HpaScaleMaximum
+49.	    expr: (kube_horizontalpodautoscaler_status_desired_replicas >= kube_horizontalpodautoscaler_spec_max_replicas) and (kube_horizontalpodautoscaler_spec_max_replicas > 1) and (kube_horizontalpodautoscaler_spec_min_replicas != kube_horizontalpodautoscaler_spec_max_replicas)
+50.	    for: 2m
+51.	    labels:
+52.	      severity: info
+53.	    annotations:
+54.	      summary: HPA scale maximum (instance {{ $labels.instance }})
+55.	      description: "HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler }} has hit maximum number of desired pods\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+56.	
+57.	# Pod unhealthy
+58.	  - alert: PodNotHealthy
+59.	    expr: sum by (namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}) > 0
+60.	    for: 15m
+61.	    labels:
+62.	      severity: critical
+63.	    annotations:
+64.	      summary: Pod not healthy (instance {{ $labels.instance }})
+65.	      description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-running state for longer than 15 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+66.	
+67.	# Pod crash looping
+68.	  - alert: PodCrashLooping
+69.	    expr: increase(kube_pod_container_status_restarts_total[1m]) > 3
+70.	    for: 2m
+71.	    labels:
+72.	      severity: warning
+73.	    annotations:
+74.	      summary: pod crash looping (instance {{ $labels.instance }})
+75.	      description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+76.	
+77.	# Deployment /daemonset rollout in stuck state
+78.	  - alert: DaemonsetRolloutStuck
+79.	    expr: kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled * 100 < 100 or kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled > 0
+80.	    for: 10m
+81.	    labels:
+82.	      severity: warning
+83.	    annotations:
+84.	      summary: DaemonSet rollout stuck (instance {{ $labels.instance }})
+85.	      description: "Some Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are not scheduled or not ready\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+86.	
